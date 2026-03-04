@@ -8,7 +8,7 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://delitos_user:delitos_pass@localhost:5432/delitos_tucuman"
+    DATABASE_URL: str = "postgresql://delitos_user:delitos_pass@localhost:5434/delitos_tucuman"
     SHAPES_BASE_PATH: str = r"Z:\MAPA DEL DELITO\MAPAS DEL DELITO POR JURISDICCIONES"
     SHAPE_ENCODING: str = "latin-1"
     KML_PATH: str = r"Z:\MAPA DEL DELITO\jurisdicciones.kml"

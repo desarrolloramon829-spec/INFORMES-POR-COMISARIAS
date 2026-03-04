@@ -16,10 +16,10 @@ class FiltrosInforme(BaseModel):
 class FiltrosComparativo(BaseModel):
     regional: Optional[str] = None
     comisaria: Optional[str] = None
-    periodo1_desde: str
-    periodo1_hasta: str
-    periodo2_desde: str
-    periodo2_hasta: str
+    fecha_desde_1: Optional[str] = None
+    fecha_hasta_1: Optional[str] = None
+    fecha_desde_2: Optional[str] = None
+    fecha_hasta_2: Optional[str] = None
 
 
 # --- Respuestas de informes ---
@@ -49,20 +49,22 @@ class ComparativoResponse(BaseModel):
     titulo: str
     periodo1: str
     periodo2: str
-    total_periodo1: int
-    total_periodo2: int
+    total_periodo_1: int = 0
+    total_periodo_2: int = 0
     filas: list[ComparativoFila]
 
 
 # --- Mapa ---
 class PuntoMapa(BaseModel):
     id: int
-    lat: float
-    lng: float
+    latitud: float
+    longitud: float
     delito: str
     modalidad: Optional[str] = None
     fecha: Optional[str] = None
+    hora: Optional[str] = None
     direccion: Optional[str] = None
+    jurisdiccion: Optional[str] = None
     comisaria: Optional[str] = None
 
 
@@ -73,12 +75,13 @@ class PuntosMapaResponse(BaseModel):
 
 # --- Filtros disponibles ---
 class RegionalInfo(BaseModel):
-    key: str
+    codigo: str
     nombre: str
     total_comisarias: int
 
 
 class ComisariaInfo(BaseModel):
+    codigo: Optional[str] = None
     nombre: str
     regional: str
 
@@ -97,7 +100,7 @@ class ImportarRequest(BaseModel):
 
 class ImportacionInfo(BaseModel):
     id: int
-    archivo: str
+    archivo_origen: str
     comisaria: str
     regional: str
     registros_importados: int
@@ -121,5 +124,9 @@ class DashboardResponse(BaseModel):
     hechos_mes_actual: int
     top_delito: Optional[str] = None
     top_delito_cantidad: int = 0
+    jurisdicciones_activas: int = 0
+    delitos_top: list[dict] = []
+    por_dia: list[dict] = []
+    por_franja: list[dict] = []
     ultima_importacion: Optional[str] = None
-    hechos_por_mes: list[dict]
+    hechos_por_mes: list[dict] = []

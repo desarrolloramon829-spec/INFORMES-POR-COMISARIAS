@@ -50,8 +50,8 @@ def get_puntos_mapa(
     puntos = [
         PuntoMapa(
             id=r.id,
-            lat=r.y,
-            lng=r.x,
+            latitud=r.y,
+            longitud=r.x,
             delito=r.delito or "Sin dato",
             modalidad=r.modalidad,
             fecha=r.fecha_hecho.isoformat() if r.fecha_hecho else None,

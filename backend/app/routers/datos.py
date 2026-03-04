@@ -39,7 +39,7 @@ def get_estado(db: Session = Depends(get_db)):
         importaciones=[
             ImportacionInfo(
                 id=imp.id,
-                archivo=imp.archivo or "",
+                archivo_origen=imp.archivo or "",
                 comisaria=imp.comisaria or "",
                 regional=imp.regional or "",
                 registros_importados=imp.registros_importados or 0,

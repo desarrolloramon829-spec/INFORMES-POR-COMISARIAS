@@ -297,11 +297,11 @@ def informe_comparativo(db: Session, filtros: FiltrosComparativo) -> Comparativo
     q1 = db.query(
         HechoDelictual.delito,
         func.count().label("cantidad"),
-    ).filter(
-        HechoDelictual.fecha_hecho >= filtros.periodo1_desde,
-        HechoDelictual.fecha_hecho <= filtros.periodo1_hasta,
-        HechoDelictual.delito.isnot(None),
-    )
+    ).filter(HechoDelictual.delito.isnot(None))
+    if filtros.fecha_desde_1:
+        q1 = q1.filter(HechoDelictual.fecha_hecho >= filtros.fecha_desde_1)
+    if filtros.fecha_hasta_1:
+        q1 = q1.filter(HechoDelictual.fecha_hecho <= filtros.fecha_hasta_1)
     if filtros.regional:
         q1 = q1.filter(HechoDelictual.regional == filtros.regional)
     if filtros.comisaria:
@@ -312,11 +312,11 @@ def informe_comparativo(db: Session, filtros: FiltrosComparativo) -> Comparativo
     q2 = db.query(
         HechoDelictual.delito,
         func.count().label("cantidad"),
-    ).filter(
-        HechoDelictual.fecha_hecho >= filtros.periodo2_desde,
-        HechoDelictual.fecha_hecho <= filtros.periodo2_hasta,
-        HechoDelictual.delito.isnot(None),
-    )
+    ).filter(HechoDelictual.delito.isnot(None))
+    if filtros.fecha_desde_2:
+        q2 = q2.filter(HechoDelictual.fecha_hecho >= filtros.fecha_desde_2)
+    if filtros.fecha_hasta_2:
+        q2 = q2.filter(HechoDelictual.fecha_hecho <= filtros.fecha_hasta_2)
     if filtros.regional:
         q2 = q2.filter(HechoDelictual.regional == filtros.regional)
     if filtros.comisaria:
@@ -346,10 +346,10 @@ def informe_comparativo(db: Session, filtros: FiltrosComparativo) -> Comparativo
 
     return ComparativoResponse(
         titulo="Comparativo entre Períodos",
-        periodo1=f"{filtros.periodo1_desde} a {filtros.periodo1_hasta}",
-        periodo2=f"{filtros.periodo2_desde} a {filtros.periodo2_hasta}",
-        total_periodo1=total_p1,
-        total_periodo2=total_p2,
+        periodo1=f"{filtros.fecha_desde_1 or ''} a {filtros.fecha_hasta_1 or ''}",
+        periodo2=f"{filtros.fecha_desde_2 or ''} a {filtros.fecha_hasta_2 or ''}",
+        total_periodo_1=total_p1,
+        total_periodo_2=total_p2,
         filas=filas,
     )
 
@@ -389,11 +389,61 @@ def generar_dashboard(db: Session) -> DashboardResponse:
         func.count().label("cantidad"),
     ).filter(
         HechoDelictual.fecha_hecho.isnot(None),
-    ).group_by("anio", "mes").order_by("anio", "mes").limit(24).all()
+    ).group_by(
+        extract("year", HechoDelictual.fecha_hecho),
+        extract("month", HechoDelictual.fecha_hecho),
+    ).order_by(
+        extract("year", HechoDelictual.fecha_hecho),
+        extract("month", HechoDelictual.fecha_hecho),
+    ).limit(24).all()
 
     meses_data = [
         {"anio": int(r.anio), "mes": int(r.mes), "cantidad": r.cantidad}
         for r in hechos_por_mes
+    ]
+
+    # Jurisdicciones activas
+    jurisdicciones_activas = db.query(
+        func.count(func.distinct(HechoDelictual.jurisdiccion))
+    ).scalar() or 0
+
+    # Top 10 delitos
+    top_delitos = db.query(
+        HechoDelictual.delito,
+        func.count().label("cantidad"),
+    ).filter(
+        HechoDelictual.delito.isnot(None),
+    ).group_by(HechoDelictual.delito).order_by(desc("cantidad")).limit(10).all()
+    total_td = sum(r.cantidad for r in top_delitos)
+    delitos_top_data = [
+        {"categoria": r.delito, "cantidad": r.cantidad,
+         "porcentaje": round((r.cantidad / total_td * 100) if total_td > 0 else 0, 2)}
+        for r in top_delitos
+    ]
+
+    # Por día de la semana
+    dias_raw = db.query(
+        HechoDelictual.dia_hecho,
+        func.count().label("cantidad"),
+    ).filter(HechoDelictual.dia_hecho.isnot(None)).group_by(HechoDelictual.dia_hecho).all()
+    total_dias = sum(r.cantidad for r in dias_raw)
+    dias_dict = {r.dia_hecho: r.cantidad for r in dias_raw}
+    por_dia_data = [
+        {"categoria": d, "cantidad": dias_dict.get(d, 0),
+         "porcentaje": round((dias_dict.get(d, 0) / total_dias * 100) if total_dias > 0 else 0, 2)}
+        for d in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    ]
+
+    # Por franja horaria
+    franjas_raw = db.query(
+        HechoDelictual.franja_horaria,
+        func.count().label("cantidad"),
+    ).filter(HechoDelictual.franja_horaria.isnot(None)).group_by(HechoDelictual.franja_horaria).all()
+    total_fr = sum(r.cantidad for r in franjas_raw)
+    por_franja_data = [
+        {"categoria": r.franja_horaria, "cantidad": r.cantidad,
+         "porcentaje": round((r.cantidad / total_fr * 100) if total_fr > 0 else 0, 2)}
+        for r in franjas_raw
     ]
 
     return DashboardResponse(
@@ -402,6 +452,10 @@ def generar_dashboard(db: Session) -> DashboardResponse:
         hechos_mes_actual=hechos_mes,
         top_delito=top.delito if top else None,
         top_delito_cantidad=top.cnt if top else 0,
+        jurisdicciones_activas=jurisdicciones_activas,
+        delitos_top=delitos_top_data,
+        por_dia=por_dia_data,
+        por_franja=por_franja_data,
         ultima_importacion=ultima.fecha_importacion.isoformat() if ultima else None,
         hechos_por_mes=meses_data,
     )

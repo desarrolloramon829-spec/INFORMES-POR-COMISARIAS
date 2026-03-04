@@ -21,10 +21,22 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Inicialización y shutdown de la aplicación."""
-    # Crear tablas si no existen
-    logger.info("Creando tablas en la base de datos...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Tablas creadas correctamente.")
+    import time
+    # Intentar crear tablas, con reintentos si la DB aún no está lista
+    max_retries = 10
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"Conectando a la base de datos (intento {attempt}/{max_retries})...")
+            Base.metadata.create_all(bind=engine)
+            logger.info("Tablas creadas / verificadas correctamente.")
+            break
+        except Exception as exc:
+            logger.warning(f"DB no disponible: {exc}")
+            if attempt < max_retries:
+                time.sleep(3)
+            else:
+                logger.error("No se pudo conectar a la base de datos después de varios intentos.")
+                logger.error("El servidor arrancará de todos modos; reintente las operaciones cuando la DB esté lista.")
     yield
     logger.info("Cerrando aplicación...")
 

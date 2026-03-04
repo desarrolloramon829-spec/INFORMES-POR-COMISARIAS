@@ -16,7 +16,7 @@ def get_regionales():
     """Lista de regionales disponibles."""
     return [
         RegionalInfo(
-            key=key,
+            codigo=key,
             nombre=data["nombre"],
             total_comisarias=len(data["comisarias"]),
         )
@@ -72,7 +72,7 @@ def get_filtros_disponibles(db: Session = Depends(get_db)):
     """Retorna todos los filtros disponibles de una vez."""
     regionales = [
         RegionalInfo(
-            key=key,
+            codigo=key,
             nombre=data["nombre"],
             total_comisarias=len(data["comisarias"]),
         )
